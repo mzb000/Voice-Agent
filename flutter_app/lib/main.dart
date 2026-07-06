@@ -20,13 +20,15 @@ Future<void> main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final baseUrl = prefs.getString('backend_url') ?? kDefaultBaseUrl;
+  final apiKey = prefs.getString('api_key') ?? '';
 
-  runApp(VoiceAgentApp(initialBaseUrl: baseUrl));
+  runApp(VoiceAgentApp(initialBaseUrl: baseUrl, initialApiKey: apiKey));
 }
 
 class VoiceAgentApp extends StatefulWidget {
-  const VoiceAgentApp({super.key, required this.initialBaseUrl});
+  const VoiceAgentApp({super.key, required this.initialBaseUrl, required this.initialApiKey});
   final String initialBaseUrl;
+  final String initialApiKey;
 
   @override
   State<VoiceAgentApp> createState() => _VoiceAgentAppState();
@@ -34,20 +36,27 @@ class VoiceAgentApp extends StatefulWidget {
 
 class _VoiceAgentAppState extends State<VoiceAgentApp> {
   late String _baseUrl = widget.initialBaseUrl;
-  late AgentController _controller = _buildController(_baseUrl);
+  late String _apiKey = widget.initialApiKey;
+  late AgentController _controller = _buildController(_baseUrl, _apiKey);
 
-  AgentController _buildController(String url) {
+  AgentController _buildController(String url, String apiKey) {
     return AgentController(
-      api: ApiClient(baseUrl: url),
+      api: ApiClient(baseUrl: url, apiKey: apiKey),
       audio: AudioService(),
     );
   }
 
-  void _onBaseUrlChanged(String url) {
+  Future<void> _onBaseUrlChanged(String url) async {
+    // The Settings screen saves both backend_url and api_key to prefs before
+    // popping, so re-read api_key here in case it changed alongside the URL.
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key') ?? '';
+    if (!mounted) return;
     setState(() {
       _controller.dispose();
       _baseUrl = url;
-      _controller = _buildController(url);
+      _apiKey = apiKey;
+      _controller = _buildController(url, apiKey);
     });
   }
 
