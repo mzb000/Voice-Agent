@@ -13,12 +13,28 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late final TextEditingController _c;
+  late final TextEditingController _urlController;
+  late final TextEditingController _apiKeyController;
 
   @override
   void initState() {
     super.initState();
-    _c = TextEditingController(text: widget.currentBaseUrl);
+    _urlController = TextEditingController(text: widget.currentBaseUrl);
+    _apiKeyController = TextEditingController();
+    _loadApiKey();
+  }
+
+  Future<void> _loadApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key') ?? '';
+    if (mounted) _apiKeyController.text = apiKey;
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    _apiKeyController.dispose();
+    super.dispose();
   }
 
   @override
@@ -47,7 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 12),
                       TextField(
-                        controller: _c,
+                        controller: _urlController,
                         style: const TextStyle(color: AppColors.textPrimary),
                         decoration: const InputDecoration(
                           filled: true,
@@ -57,14 +73,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           hintStyle: TextStyle(color: AppColors.textSecondary),
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      const Text('API Key', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Only needed if your backend has APP_API_KEY set. Sent as the X-API-Key header.',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _apiKeyController,
+                        obscureText: true,
+                        style: const TextStyle(color: AppColors.textPrimary),
+                        decoration: const InputDecoration(
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderSide: BorderSide.none),
+                          hintText: 'Optional',
+                          hintStyle: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       Align(
                         alignment: Alignment.centerRight,
                         child: FilledButton(
                           onPressed: () async {
                             final prefs = await SharedPreferences.getInstance();
-                            await prefs.setString('backend_url', _c.text.trim());
-                            if (mounted) Navigator.of(context).pop(_c.text.trim());
+                            await prefs.setString('backend_url', _urlController.text.trim());
+                            await prefs.setString('api_key', _apiKeyController.text.trim());
+                            if (mounted) Navigator.of(context).pop(_urlController.text.trim());
                           },
                           child: const Text('Save'),
                         ),
