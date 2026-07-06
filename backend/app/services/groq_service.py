@@ -1,12 +1,33 @@
-"""Groq service layer: STT (Whisper), LLM (Llama), TTS (PlayAI)."""
+"""Groq service layer: STT (Whisper), LLM (Llama), TTS (PlayAI).
+
+Blocking Groq SDK calls are retried with backoff on transient errors. Route
+handlers are responsible for running these methods off the asyncio event
+loop (see routes/voice.py, which wraps calls with run_in_threadpool).
+"""
 from __future__ import annotations
 
 import io
 from typing import List, Dict, Optional
 
+import groq
 from groq import Groq
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from ..config import settings
+
+RETRYABLE_ERRORS = (
+    groq.APIConnectionError,
+    groq.APITimeoutError,
+    groq.InternalServerError,
+    groq.RateLimitError,
+)
+
+_retry = retry(
+    reraise=True,
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
+    retry=retry_if_exception_type(RETRYABLE_ERRORS),
+)
 
 
 class GroqService:
@@ -16,6 +37,7 @@ class GroqService:
         self.client = Groq(api_key=settings.groq_api_key)
 
     # ---------- Speech-to-Text ----------
+    @_retry
     def transcribe(self, audio_bytes: bytes, filename: str = "audio.wav") -> Dict:
         """Return {'text', 'language', 'duration'}."""
         buf = io.BytesIO(audio_bytes)
@@ -33,6 +55,7 @@ class GroqService:
         }
 
     # ---------- LLM Chat ----------
+    @_retry
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -56,6 +79,7 @@ class GroqService:
         return {"reply": reply, "usage": usage}
 
     # ---------- Text-to-Speech ----------
+    @_retry
     def synthesize(self, text: str, voice: Optional[str] = None) -> bytes:
         """Return raw WAV audio bytes."""
         response = self.client.audio.speech.create(
