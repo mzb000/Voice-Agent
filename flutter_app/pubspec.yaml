@@ -1,0 +1,44 @@
+name: voice_agent
+description: A modern voice agent app with glassmorphism UI, powered by FastAPI + Groq.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State management
+  provider: ^6.1.2
+
+  # Networking
+  dio: ^5.6.0
+  http: ^1.2.2
+
+  # Audio
+  record: ^5.1.2          # microphone recording w/ amplitude stream
+  just_audio: ^0.9.40     # audio playback
+  path_provider: ^2.1.4
+  permission_handler: ^11.3.1
+
+  # UI
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+  glass_kit: ^4.0.1
+  lottie: ^3.1.2
+
+  # Utils
+  shared_preferences: ^2.3.2
+  uuid: ^4.5.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

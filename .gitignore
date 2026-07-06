@@ -1,0 +1,50 @@
+# ============ Secrets ============
+# Never commit real API keys / env files
+.env
+*.env
+!*.env.example
+backend/.env
+
+# ============ Python / FastAPI backend ============
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+*.log
+
+# ============ Flutter / Dart app ============
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+flutter_app/build/
+flutter_app/.pub-cache/
+flutter_app/.pub/
+flutter_app/coverage/
+**/generated_plugin_registrant.dart
+
+# Android
+flutter_app/android/.gradle/
+flutter_app/android/app/debug/
+flutter_app/android/app/profile/
+flutter_app/android/app/release/
+flutter_app/android/local.properties
+flutter_app/android/key.properties
+**/*.keystore
+**/*.jks
+
+# iOS
+flutter_app/ios/Pods/
+flutter_app/ios/.symlinks/
+flutter_app/ios/Flutter/Flutter.framework
+flutter_app/ios/Flutter/Flutter.podspec
+flutter_app/ios/Runner/GeneratedPluginRegistrant.*
+
+# ============ IDE / OS ============
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
