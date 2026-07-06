@@ -20,14 +20,16 @@ class VoiceTurnResult {
 }
 
 class ApiClient {
-  ApiClient({required this.baseUrl})
+  ApiClient({required this.baseUrl, this.apiKey = ''})
       : _dio = Dio(BaseOptions(
           baseUrl: baseUrl,
           connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 90),
+          headers: apiKey.isNotEmpty ? {'X-API-Key': apiKey} : null,
         ));
 
   final String baseUrl;
+  final String apiKey;
   final Dio _dio;
 
   Future<VoiceTurnResult> voiceTurn({
