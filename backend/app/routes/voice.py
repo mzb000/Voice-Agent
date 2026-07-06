@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 import base64
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+import json
+
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
+from ..config import settings
+from ..main import limiter
 from ..models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -16,7 +20,6 @@ from ..services.groq_service import get_service
 
 router = APIRouter(prefix="/api", tags=["voice"])
 
-
 SYSTEM_PROMPT = (
     "You are a helpful, concise voice assistant. "
     "Keep replies short, natural, and easy to speak aloud. "
@@ -24,8 +27,15 @@ SYSTEM_PROMPT = (
 )
 
 
-@router.post("/transcribe", response_model=TranscribeResponse)
-async def transcribe(audio: UploadFile = File(...)):
+async def require_api_key(x_api_key: str = Header(default="")):
+    """Require a matching X-API-Key header when APP_API_KEY is configured."""
+    if settings.app_api_key and x_api_key != settings.app_api_key:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+
+@router.post("/transcribe", response_model=TranscribeResponse, dependencies=[Depends(require_api_key)])
+@limiter.limit(settings.rate_limit)
+async def transcribe(request: Request, audio: UploadFile = File(...)):
     """Speech-to-text via Groq Whisper."""
     try:
         data = await audio.read()
@@ -39,8 +49,9 @@ async def transcribe(audio: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}") from exc
 
 
-@router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_api_key)])
+@limiter.limit(settings.rate_limit)
+async def chat(request: Request, req: ChatRequest):
     """LLM chat completion via Groq."""
     try:
         messages = [m.model_dump() for m in req.messages]
@@ -56,8 +67,9 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Chat failed: {exc}") from exc
 
 
-@router.post("/tts")
-async def tts(req: TTSRequest):
+@router.post("/tts", dependencies=[Depends(require_api_key)])
+@limiter.limit(settings.rate_limit)
+async def tts(request: Request, req: TTSRequest):
     """Text-to-speech via Groq PlayAI. Returns raw audio/wav."""
     try:
         audio_bytes = get_service().synthesize(req.text, voice=req.voice)
@@ -66,8 +78,10 @@ async def tts(req: TTSRequest):
         raise HTTPException(status_code=500, detail=f"TTS failed: {exc}") from exc
 
 
-@router.post("/voice-turn", response_model=VoiceTurnResponse)
+@router.post("/voice-turn", response_model=VoiceTurnResponse, dependencies=[Depends(require_api_key)])
+@limiter.limit(settings.rate_limit)
 async def voice_turn(
+    request: Request,
     audio: UploadFile = File(...),
     history: str = Form("[]"),
 ):
@@ -75,8 +89,6 @@ async def voice_turn(
 
     `history` is a JSON string of prior [{role, content}, ...] messages.
     """
-    import json
-
     try:
         svc = get_service()
 
